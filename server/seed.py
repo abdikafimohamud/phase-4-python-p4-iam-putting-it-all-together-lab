@@ -1,63 +1,38 @@
-#!/usr/bin/env python3
-
-from random import randint, choice as rc
-
-from faker import Faker
-
-from app import app
-from models import db, Recipe, User
-
-fake = Faker()
+from app import app, db
+from models import User, Recipe
 
 with app.app_context():
+    print("Seeding database...")
 
-    print("Deleting all records...")
-    Recipe.query.delete()
-    User.query.delete()
+    db.drop_all()
+    db.create_all()
 
-    fake = Faker()
+    # Create test users
+    user1 = User(username="alice", image_url="https://picsum.photos/200", bio="Chef Alice")
+    user1.password_hash = "password123"
 
-    print("Creating users...")
+    user2 = User(username="bob", image_url="https://picsum.photos/200", bio="Chef Bob")
+    user2.password_hash = "mypassword"
 
-    # make sure users have unique usernames
-    users = []
-    usernames = []
-
-    for i in range(20):
-        
-        username = fake.first_name()
-        while username in usernames:
-            username = fake.first_name()
-        usernames.append(username)
-
-        user = User(
-            username=username,
-            bio=fake.paragraph(nb_sentences=3),
-            image_url=fake.url(),
-        )
-
-        user.password_hash = user.username + 'password'
-
-        users.append(user)
-
-    db.session.add_all(users)
-
-    print("Creating recipes...")
-    recipes = []
-    for i in range(100):
-        instructions = fake.paragraph(nb_sentences=8)
-        
-        recipe = Recipe(
-            title=fake.sentence(),
-            instructions=instructions,
-            minutes_to_complete=randint(15,90),
-        )
-
-        recipe.user = rc(users)
-
-        recipes.append(recipe)
-
-    db.session.add_all(recipes)
-    
+    db.session.add_all([user1, user2])
     db.session.commit()
-    print("Complete.")
+
+    # Create test recipes
+    recipe1 = Recipe(
+        title="Spaghetti Carbonara",
+        instructions="Boil pasta, cook pancetta, mix with eggs, cheese, and pepper until creamy.",
+        minutes_to_complete=25,
+        user_id=user1.id
+    )
+
+    recipe2 = Recipe(
+        title="Vegetable Stir Fry",
+        instructions="Chop vegetables, stir fry with soy sauce, garlic, and ginger until tender.",
+        minutes_to_complete=15,
+        user_id=user2.id
+    )
+
+    db.session.add_all([recipe1, recipe2])
+    db.session.commit()
+
+    print("Database seeded successfully!")
